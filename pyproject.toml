@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "velit-mqtt"
+version = "0.1.0"
+description = "Bridge Velit BLE camping heaters and air conditioners to MQTT"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+    "aiomqtt>=2.0",
+    "bleak>=0.21",
+    "bleak-retry-connector>=3.4",
+    "PyYAML>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/JohnFreeborg/velit-hass"
+Issues = "https://github.com/JohnFreeborg/velit-hass/issues"
+
+[project.scripts]
+velit-mqtt = "velit_mqtt.service:main"
+
+[project.optional-dependencies]
+test = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[tool.setuptools.packages.find]
+include = ["velit_mqtt*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+# Make the top-level velit_mqtt package importable without installing it.
+pythonpath = ["."]

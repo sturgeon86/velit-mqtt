@@ -1,0 +1,30 @@
+[Unit]
+Description=Velit BLE-to-MQTT bridge
+Documentation=https://github.com/JohnFreeborg/velit-hass
+# Wait for both Bluetooth and the network (the MQTT broker) to be available.
+After=bluetooth.target network-online.target
+Wants=bluetooth.target network-online.target
+
+[Service]
+Type=simple
+# Adjust User/Group to an account that can access BlueZ over D-Bus.
+User=velit
+Group=bluetooth
+
+# Install into a venv at /opt/velit-mqtt (see README) or use the system python.
+WorkingDirectory=/opt/velit-mqtt
+Environment=VELIT_MQTT_CONFIG=/etc/velit-mqtt/config.yaml
+# Provide the broker password out-of-band if you used password_env in the config:
+# Environment=VELIT_MQTT_PASSWORD=changeme
+ExecStart=/opt/velit-mqtt/venv/bin/python -m velit_mqtt
+
+Restart=on-failure
+RestartSec=5
+
+# Light hardening — relax if it interferes with your setup.
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

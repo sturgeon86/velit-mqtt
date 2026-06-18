@@ -1,0 +1,5 @@
+# Runtime dependencies for the velit-mqtt service.
+aiomqtt>=2.0
+bleak>=0.21
+bleak-retry-connector>=3.4
+PyYAML>=6.0

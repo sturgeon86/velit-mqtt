@@ -1,0 +1,36 @@
+# velit-mqtt configuration
+#
+# Copy to config.yaml (or /etc/velit-mqtt/config.yaml) and edit.
+# Run with:  python -m velit_mqtt --config config.yaml
+
+mqtt:
+  host: localhost
+  port: 1883
+  # username: myuser
+  # password: mypassword        # or set password_env to read from the environment
+  # password_env: VELIT_MQTT_PASSWORD
+  client_id: velit-mqtt
+  base_topic: velit             # state:  velit/<node>/state
+                                # set:    velit/<node>/set/<field>
+  keepalive: 60
+
+  # Home Assistant MQTT discovery. When true, retained discovery configs are
+  # published so devices appear in HA automatically (no custom component needed).
+  # Set false for a plain, broker-agnostic interface.
+  discovery: true
+  discovery_prefix: homeassistant
+
+devices:
+  - name: Camper Heater          # node id is derived from the name (e.g. camper_heater)
+    address: "AA:BB:CC:DD:EE:FF"
+    type: heater                 # heater | ac
+    poll_interval: 30            # seconds (drops to 5s during transitions / after commands)
+    # fallback_unit: C           # C | F — assumed only if the unit can't be detected
+    # node_id: camper_heater     # override the auto-derived node id if you like
+
+  - name: Camper AC
+    address: "11:22:33:44:55:66"
+    type: ac
+    poll_interval: 30
+
+log_level: INFO                  # DEBUG | INFO | WARNING | ERROR

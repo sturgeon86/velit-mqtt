@@ -1,10 +1,6 @@
-pytest-homeassistant-custom-component
-pytest>=7.0
-pytest-cov
-syrupy
+# Test dependencies for velit-mqtt.
+# Runtime deps (bleak, aiomqtt, PyYAML) are needed too — install requirements.txt first.
+-r requirements.txt
+pytest>=8.0
+pytest-asyncio>=0.23
 ruff
-# Transitive dependencies pulled in by HA's bluetooth/USB components at import time.
-# Not declared by pytest-homeassistant-custom-component but required for tests to collect.
-aiousbwatcher
-pyserial
-pyudev

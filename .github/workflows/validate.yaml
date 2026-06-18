@@ -7,31 +7,17 @@ on:
     branches: [main, dev]
 
 jobs:
-  hassfest:
-    name: Validate with hassfest
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: home-assistant/actions/hassfest@master
-
-  hacs:
-    name: Validate with HACS
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: hacs/action@main
-        with:
-          category: integration
-
   tests:
-    name: Run tests
+    name: Lint and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install dependencies
         run: pip install -r requirements_test.txt
+      - name: Lint
+        run: ruff check velit_mqtt tests
       - name: Run tests
         run: pytest tests/ -v
