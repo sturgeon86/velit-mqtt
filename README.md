@@ -35,18 +35,23 @@ automatically (no custom component required).
 
 ## Supported Devices
 
+> **None of these are yet hardware-validated on this MQTT fork.** The Velit
+> protocols were reverse-engineered and tested in the upstream Home Assistant
+> integration, but this standalone service has not been confirmed against real
+> hardware — treat every device below as untested until verified here.
+
 | Device | Type | Tested | Firmware |
 |---|---|---|---|
-| Velit 4000P (fixed) | Heater | Yes | 3.13 / 3.26 / 3.62 |
+| Velit 4000P (fixed) | Heater | No | — |
 | Velit Portable | Heater | No | — |
-| Velit 2000R | AC | In progress | — |
+| Velit 2000R | AC | No | — |
 | Velit 2000R Mini | AC | No | — |
 | Velit 3000R | AC | No | — |
 | Velit 2000U | AC | No | — |
 | Velit V3 | AC | No | — |
 
-If you have tested this on a device not listed above, please open an issue with
-the model and firmware version so the table can be updated.
+If you have run this against any device, please open an issue with the model,
+firmware version, and what worked so the table can be updated.
 
 ---
 
@@ -87,7 +92,7 @@ fan speed 1–5, target temperature, inlet temperature, fault code.
 
 ```bash
 sudo install -d -o "$USER" /opt/velit-mqtt
-git clone https://github.com/JohnFreeborg/velit-hass /opt/velit-mqtt
+git clone -b dev https://github.com/sturgeon86/velit-mqtt.git /opt/velit-mqtt
 cd /opt/velit-mqtt
 
 python3 -m venv venv
