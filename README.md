@@ -120,6 +120,34 @@ sudo systemctl enable --now velit-mqtt
 journalctl -u velit-mqtt -f
 ```
 
+### Raspberry Pi (Bookworm)
+
+This runs comfortably on a Raspberry Pi 3B or newer — the load is tiny (well
+under ~80 MB RAM, near-idle CPU). Use **64-bit Raspberry Pi OS Bookworm**, which
+ships Python 3.11; the ARM wheels for all dependencies install automatically via
+piwheels, so nothing needs compiling. Pi-specific steps:
+
+- **Bluetooth access.** The service user must be in the `bluetooth` group to
+  reach BlueZ over D-Bus, and the radio must be unblocked:
+  ```bash
+  sudo usermod -aG bluetooth pi      # use your actual user
+  rfkill unblock bluetooth
+  ```
+  Set `User=pi` (your user) in the systemd unit, then log out/in (or reboot) so
+  the new group membership takes effect.
+
+- **Range.** The Pi's onboard Bluetooth shares the 2.4 GHz antenna with Wi-Fi
+  and is fairly weak. Keep the Pi within good range of the device; if it sits
+  behind walls or across a camper, a cheap USB BLE dongle improves reliability.
+
+- **Multiple devices.** Each Velit device uses one BLE connection, so running a
+  heater and an AC at once means two simultaneous links — fine for the Pi, but
+  worth confirming on your hardware.
+
+- **Web UI.** It binds to `127.0.0.1` by default. To reach it from your laptop,
+  either tunnel (`ssh -L 8099:localhost:8099 pi@<pi>`) or set `web.host: 0.0.0.0`
+  **with** a `web.token`.
+
 ---
 
 ## Configuration
