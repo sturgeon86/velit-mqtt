@@ -20,6 +20,17 @@ mqtt:
   discovery: true
   discovery_prefix: homeassistant
 
+# Web UI for discovering/adding devices and editing these MQTT settings.
+# Bound to localhost by default — it can add devices and change broker settings
+# on a service that controls a combustion heater, so do not expose it to an
+# untrusted network without setting a token.
+web:
+  enabled: true
+  host: 127.0.0.1        # use 0.0.0.0 to reach it from other machines (set a token!)
+  port: 8099
+  # token: change-me     # required as ?token= or X-Auth-Token header when set
+
+# Devices may be left empty and added later from the web UI.
 devices:
   - name: Camper Heater          # node id is derived from the name (e.g. camper_heater)
     address: "AA:BB:CC:DD:EE:FF"

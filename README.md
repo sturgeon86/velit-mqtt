@@ -49,6 +49,7 @@ the model and firmware version so the table can be updated.
 
 ## Features
 
+- Built-in web UI (localhost) to scan for devices, add/remove them, and edit MQTT broker settings — applied live, no restart
 - Connects to one or more Velit devices over BLE and keeps them connected
 - Publishes a full JSON state object per device (retained) and routes commands back
 - Adaptive polling — drops to 5 s during state transitions and after commands, returns to the configured interval once settled
@@ -90,18 +91,12 @@ python3 -m venv venv
 ./venv/bin/pip install -r requirements.txt
 ```
 
-Find your device's Bluetooth address (close the Velit app first):
-
-```bash
-./venv/bin/python tools/discover.py
-```
-
-Create the config:
+Create the config (you can leave `devices` empty and add them from the web UI):
 
 ```bash
 sudo install -d /etc/velit-mqtt
 sudo cp config.example.yaml /etc/velit-mqtt/config.yaml
-sudo nano /etc/velit-mqtt/config.yaml      # set broker + device address(es)
+sudo nano /etc/velit-mqtt/config.yaml      # set your broker host/credentials
 ```
 
 Run it in the foreground to check everything connects:
@@ -109,6 +104,11 @@ Run it in the foreground to check everything connects:
 ```bash
 ./venv/bin/python -m velit_mqtt --config /etc/velit-mqtt/config.yaml
 ```
+
+Then open the web UI at **http://127.0.0.1:8099** to scan for and add your
+device(s) — or add them by hand in the config file. To find an address from the
+command line instead, use `./venv/bin/python tools/discover.py` (close the Velit
+mobile app first).
 
 ### Run as a service
 
@@ -144,6 +144,25 @@ devices:
 
 The config path is taken from `--config`, else `$VELIT_MQTT_CONFIG`, else
 `./config.yaml`, else `/etc/velit-mqtt/config.yaml`.
+
+---
+
+## Web UI
+
+A small management UI is served at **http://`web.host`:`web.port`** (default
+`http://127.0.0.1:8099`). It lets you:
+
+- **Scan** for nearby Velit devices over BLE and **add** them (name + type) — written to the config and started live
+- **Remove** devices
+- Edit the **MQTT broker** settings (host, port, credentials, base topic, discovery) — applied with a live reconnect
+
+Changes are persisted back to the config file, so they survive restarts.
+
+> The UI binds to localhost by default. It can add devices and change broker
+> settings on a service that controls a combustion heater, so only expose it
+> beyond localhost (`host: 0.0.0.0`) if you also set a `token` — it is then
+> required as an `X-Auth-Token` header or `?token=` query parameter
+> (`http://host:8099/?token=...`). Disable it entirely with `web.enabled: false`.
 
 ---
 

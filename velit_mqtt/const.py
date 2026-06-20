@@ -18,6 +18,14 @@ UUID_SERVICE = "0000ffe0-0000-1000-8000-00805f9b34fb"
 UUID_READ_NOTIFY = "0000ffe1-0000-1000-8000-00805f9b34fb"
 UUID_WRITE = "0000ffe2-0000-1000-8000-00805f9b34fb"
 
+# BLE advertisement filters for discovery scans.
+# Name prefixes vary by firmware; the manufacturer ID (BEKEN Corp, 0x585A) and
+# the service UUID are more reliable fallbacks. The 0000ffe0 service is a generic
+# UART-over-BLE UUID and may match non-Velit devices — the protocol handshake on
+# connect is the real guard, so this filter intentionally casts wide.
+BLE_NAME_PREFIXES = ("VELIT", "VLIT", "D30", "KT2", "KT")
+BLE_MANUFACTURER_ID = 22618
+
 # Heater packet addressing — verified on hardware (2026-03-25, Velit 4000P).
 # The slave address 0x0000002D is a fixed constant on all known Velit heaters;
 # it does NOT uniquely identify a device. Device isolation is provided entirely

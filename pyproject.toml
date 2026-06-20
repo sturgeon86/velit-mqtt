@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = [
     "aiomqtt>=2.0",
+    "aiohttp>=3.9",
     "bleak>=0.21",
     "bleak-retry-connector>=3.4",
     "PyYAML>=6.0",
@@ -28,6 +29,9 @@ test = ["pytest>=8.0", "pytest-asyncio>=0.23"]
 
 [tool.setuptools.packages.find]
 include = ["velit_mqtt*"]
+
+[tool.setuptools.package-data]
+velit_mqtt = ["web/*.html"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

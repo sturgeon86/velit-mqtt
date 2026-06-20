@@ -1,4 +1,4 @@
-"""Service orchestration: wire devices to the MQTT bridge and run the loop."""
+"""Service orchestration: run the bridge, devices, and the web UI together."""
 
 from __future__ import annotations
 
@@ -7,37 +7,17 @@ import asyncio
 import logging
 import signal
 
-from . import __version__, const
-from .config import AppConfig, ConfigError, DeviceConfig, load_config
-from .devices import VelitACDevice, VelitDevice, VelitHeaterDevice
-from .mqtt_bridge import MqttBridge
+from . import __version__
+from .config import AppConfig, ConfigError, load_config, resolve_config_path
+from .manager import BridgeManager
+from .web import start_web
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def build_device(cfg: DeviceConfig) -> VelitDevice:
-    """Instantiate the right device manager for a config entry."""
-    if cfg.type == const.DEVICE_TYPE_HEATER:
-        return VelitHeaterDevice(
-            cfg.name, cfg.address, cfg.node_id, cfg.poll_interval, cfg.fallback_unit
-        )
-    return VelitACDevice(
-        cfg.name, cfg.address, cfg.node_id, cfg.poll_interval, cfg.fallback_unit
-    )
-
-
-async def run_service(config: AppConfig) -> None:
-    """Start the bridge and all device loops, and run until signalled to stop."""
-    devices: dict[str, VelitDevice] = {}
-    device_configs: dict[str, DeviceConfig] = {}
-    for cfg in config.devices:
-        devices[cfg.node_id] = build_device(cfg)
-        device_configs[cfg.node_id] = cfg
-
-    bridge = MqttBridge(config, devices, device_configs)
-    for device in devices.values():
-        device.on_state = bridge.publish_state
-        device.on_availability = bridge.publish_availability
+async def run_service(config: AppConfig, config_path: str) -> None:
+    """Start the bridge, device loops, and (if enabled) the web UI; run until stopped."""
+    manager = BridgeManager(config, config_path)
 
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
@@ -50,25 +30,21 @@ async def run_service(config: AppConfig) -> None:
 
     _LOGGER.info(
         "velit-mqtt %s starting — %d device(s), broker %s:%d",
-        __version__, len(devices), config.mqtt.host, config.mqtt.port,
+        __version__, len(config.devices), config.mqtt.host, config.mqtt.port,
     )
 
-    bridge_task = asyncio.create_task(bridge.run())
-    for device in devices.values():
-        await device.start()
+    await manager.start()
+
+    web_runner = None
+    if config.web.enabled:
+        web_runner = await start_web(manager, config.web)
 
     await stop_event.wait()
 
     _LOGGER.info("Shutting down...")
-    bridge.stop()
-    for device in devices.values():
-        await device.stop()
-    await bridge.announce_offline()
-    bridge_task.cancel()
-    try:
-        await bridge_task
-    except asyncio.CancelledError:
-        pass
+    if web_runner is not None:
+        await web_runner.cleanup()
+    await manager.stop()
 
 
 def _setup_logging(level: str) -> None:
@@ -91,8 +67,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--version", action="version", version=f"velit-mqtt {__version__}")
     args = parser.parse_args(argv)
 
+    path = resolve_config_path(args.config)
     try:
-        config = load_config(args.config)
+        config = load_config(path)
     except ConfigError as exc:
         # Logging may not be configured yet — print plainly and exit non-zero.
         print(f"Configuration error: {exc}")
@@ -101,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     _setup_logging(config.log_level)
 
     try:
-        asyncio.run(run_service(config))
+        asyncio.run(run_service(config, path))
     except KeyboardInterrupt:
         pass
     return 0

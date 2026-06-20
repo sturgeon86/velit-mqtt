@@ -122,6 +122,11 @@ class VelitDevice:
     def connected(self) -> bool:
         return self._client.connected
 
+    @property
+    def available(self) -> bool:
+        """True once polling has succeeded and not yet exceeded the failure tolerance."""
+        return self._available
+
     async def ble_connect(self) -> None:
         """Re-acquire the BLE connection (clears a prior manual release)."""
         self._ble_released = False

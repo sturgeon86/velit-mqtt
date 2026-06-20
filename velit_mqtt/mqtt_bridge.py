@@ -68,6 +68,10 @@ class MqttBridge:
     def _command_filter(self) -> str:
         return f"{self._base}/+/set/#"
 
+    @property
+    def connected(self) -> bool:
+        return self._connected
+
     # ------------------------------------------------------------------
     # Publishing (called from device callbacks)
     # ------------------------------------------------------------------
@@ -186,6 +190,30 @@ class MqttBridge:
             },
         ]
         return payload
+
+    async def announce_device(self, cfg: DeviceConfig, device: VelitDevice) -> None:
+        """Publish discovery + current state for a device added at runtime.
+
+        The command subscription is a wildcard (`<base>/+/set/#`) so no
+        re-subscribe is needed for a newly added node.
+        """
+        if not self._connected or self._client is None:
+            return
+        if self._mqtt.discovery:
+            await self._publish_discovery(cfg, device)
+        await self.publish_availability(device, device.connected)
+        if device.state:
+            await self.publish_state(device)
+
+    async def retract_device(self, node_id: str, cfg: DeviceConfig) -> None:
+        """Clear all retained topics for a device removed at runtime."""
+        if not self._connected or self._client is None:
+            return
+        if self._mqtt.discovery:
+            for topic in discovery_topics(cfg, self._base, self._mqtt.discovery_prefix):
+                await self._client.publish(topic, b"", qos=1, retain=True)
+        for topic in (self.state_topic(node_id), self.availability_topic(node_id)):
+            await self._client.publish(topic, b"", qos=1, retain=True)
 
     # ------------------------------------------------------------------
     # Inbound command handling

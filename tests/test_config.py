@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from velit_mqtt.config import ConfigError, load_config
+from velit_mqtt.config import ConfigError, load_config, save_config
 
 _VALID = """
 mqtt:
@@ -62,9 +62,10 @@ devices:
     assert cfg.mqtt.password == "s3cret"
 
 
-def test_missing_devices(tmp_path):
-    with pytest.raises(ConfigError):
-        load_config(_write(tmp_path, "mqtt:\n  host: localhost\n"))
+def test_no_devices_is_allowed(tmp_path):
+    # Devices can be added later via the web UI, so an empty list is valid.
+    cfg = load_config(_write(tmp_path, "mqtt:\n  host: localhost\n"))
+    assert cfg.devices == []
 
 
 def test_unknown_device_type(tmp_path):
@@ -105,3 +106,19 @@ devices:
 def test_missing_file():
     with pytest.raises(ConfigError):
         load_config("/nonexistent/path/to/config.yaml")
+
+
+def test_save_round_trip(tmp_path):
+    path = _write(tmp_path, _VALID)
+    cfg = load_config(path)
+    cfg.mqtt.host = "newhost"
+    cfg.mqtt.base_topic = "vmqtt"
+    save_config(cfg, path)
+
+    reloaded = load_config(path)
+    assert reloaded.mqtt.host == "newhost"
+    assert reloaded.mqtt.base_topic == "vmqtt"
+    assert reloaded.mqtt.discovery is False
+    assert len(reloaded.devices) == 2
+    assert reloaded.devices[0].node_id == "camper_heater"
+    assert reloaded.devices[0].address == "AA:BB:CC:DD:EE:FF"

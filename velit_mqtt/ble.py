@@ -24,15 +24,19 @@ import time
 from bleak import BleakScanner
 from bleak.backends.characteristic import BleakGATTCharacteristic
 from bleak.backends.device import BLEDevice
+from bleak.backends.scanner import AdvertisementData
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
 
 from .const import (
     AC_COMMAND_INTERVAL_MS,
     AC_MAX_RETRIES,
     AC_RESPONSE_TIMEOUT_S,
+    BLE_MANUFACTURER_ID,
+    BLE_NAME_PREFIXES,
     HEATER_MASTER_ADDR,
     HEATER_SLAVE_ADDR,
     UUID_READ_NOTIFY,
+    UUID_SERVICE,
     UUID_WRITE,
 )
 from .protocol import ac as ac_protocol
@@ -43,6 +47,41 @@ _LOGGER = logging.getLogger(__name__)
 _SCAN_TIMEOUT = 20.0             # seconds to look for the device before connect
 _HEATER_COMMAND_TIMEOUT = 5.0    # seconds to wait for a notification response
 _AC_COMMAND_INTERVAL = AC_COMMAND_INTERVAL_MS / 1000.0
+
+
+def _is_velit(device: BLEDevice, adv: AdvertisementData) -> bool:
+    """Best-effort match for a Velit advertisement (name, manufacturer, or service)."""
+    name = adv.local_name or device.name or ""
+    if name.upper().startswith(BLE_NAME_PREFIXES):
+        return True
+    if BLE_MANUFACTURER_ID in adv.manufacturer_data:
+        return True
+    return UUID_SERVICE in (adv.service_uuids or [])
+
+
+async def scan_velit_devices(timeout: float = 8.0) -> list[dict]:
+    """Scan for nearby Velit devices and return [{address, name, rssi}], strongest first.
+
+    Used by the onboarding UI. Close the Velit mobile app first — it holds the
+    single BLE connection and suppresses advertisements while connected.
+    """
+    found: dict[str, dict] = {}
+
+    def callback(device: BLEDevice, adv: AdvertisementData) -> None:
+        if _is_velit(device, adv):
+            found[device.address] = {
+                "address": device.address,
+                "name": adv.local_name or device.name or "",
+                "rssi": adv.rssi,
+            }
+
+    scanner = BleakScanner(detection_callback=callback)
+    await scanner.start()
+    try:
+        await asyncio.sleep(timeout)
+    finally:
+        await scanner.stop()
+    return sorted(found.values(), key=lambda d: d["rssi"] if d["rssi"] is not None else -999, reverse=True)
 
 
 class _VelitBleClient:

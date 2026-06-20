@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>velit-mqtt</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #1a2027; --border: #2a333d; --text: #e6edf3;
+    --muted: #8b97a3; --accent: #3b82f6; --ok: #22c55e; --bad: #ef4444; --warn: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 18px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px; }
+  section { background: var(--panel); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  h2 { font-size: 15px; margin: 0 0 16px; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--muted); }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  input, select { width: 100%; padding: 8px 10px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 6px; color: var(--text); font: inherit; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 14px; }
+  .field { min-width: 0; }
+  button { padding: 8px 16px; border: 0; border-radius: 6px; background: var(--accent);
+    color: #fff; font: inherit; font-weight: 500; cursor: pointer; }
+  button:hover { filter: brightness(1.1); }
+  button.secondary { background: #2a333d; }
+  button.danger { background: transparent; color: var(--bad); border: 1px solid var(--bad);
+    padding: 5px 10px; font-size: 13px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px;
+    font-weight: 500; }
+  .badge.ok { background: rgba(34,197,94,.15); color: var(--ok); }
+  .badge.bad { background: rgba(239,68,68,.15); color: var(--bad); }
+  .badge.muted { background: rgba(139,151,163,.15); color: var(--muted); }
+  .device, .found { display: flex; align-items: center; gap: 12px; padding: 12px;
+    border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; }
+  .device .info, .found .info { flex: 1; min-width: 0; }
+  .device .name, .found .name { font-weight: 600; }
+  .device .meta, .found .meta { font-size: 13px; color: var(--muted); }
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .toolbar .spacer { flex: 1; }
+  .msg { padding: 10px 12px; border-radius: 6px; margin-bottom: 14px; font-size: 14px; display: none; }
+  .msg.show { display: block; }
+  .msg.error { background: rgba(239,68,68,.12); color: #fca5a5; }
+  .msg.success { background: rgba(34,197,94,.12); color: #86efac; }
+  .empty { color: var(--muted); font-size: 14px; padding: 6px 0; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  footer { max-width: 860px; margin: 0 auto; padding: 0 24px 40px; }
+  .warn-box { border: 1px solid var(--warn); color: var(--warn);
+    background: rgba(245,158,11,.08); border-radius: 8px; padding: 12px 14px; font-size: 13px; }
+  .checkbox { display: flex; align-items: center; gap: 8px; }
+  .checkbox input { width: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>velit-mqtt</h1>
+  <span id="broker-badge" class="badge muted">broker: …</span>
+</header>
+
+<main>
+  <div id="message" class="msg"></div>
+
+  <!-- MQTT settings -->
+  <section>
+    <h2>MQTT Server</h2>
+    <div class="row">
+      <div class="field"><label>Host</label><input id="m-host" placeholder="localhost"></div>
+      <div class="field"><label>Port</label><input id="m-port" type="number" value="1883"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Username</label><input id="m-username" placeholder="(optional)"></div>
+      <div class="field"><label>Password</label><input id="m-password" type="password" placeholder="(unchanged)"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Base topic</label><input id="m-base" value="velit"></div>
+      <div class="field"><label>Discovery prefix</label><input id="m-prefix" value="homeassistant"></div>
+    </div>
+    <div class="checkbox" style="margin-bottom:14px">
+      <input type="checkbox" id="m-discovery"><label for="m-discovery" style="margin:0">Publish Home Assistant MQTT discovery</label>
+    </div>
+    <button id="save-mqtt">Save &amp; reconnect</button>
+    <p class="note" id="pw-note"></p>
+  </section>
+
+  <!-- Configured devices -->
+  <section>
+    <h2>Devices</h2>
+    <div id="devices"></div>
+  </section>
+
+  <!-- Add a device -->
+  <section>
+    <h2>Add a device</h2>
+    <div class="toolbar">
+      <button id="scan-btn">Scan for devices</button>
+      <span class="spacer"></span>
+      <span id="scan-status" class="meta"></span>
+    </div>
+    <div id="found"></div>
+    <details style="margin-top:10px">
+      <summary style="cursor:pointer;color:var(--muted)">Add by address manually</summary>
+      <div class="row" style="margin-top:12px">
+        <div class="field"><label>Name</label><input id="man-name" placeholder="Camper Heater"></div>
+        <div class="field"><label>Address</label><input id="man-address" placeholder="AA:BB:CC:DD:EE:FF"></div>
+        <div class="field"><label>Type</label>
+          <select id="man-type"><option value="heater">Heater</option><option value="ac">Air Conditioner</option></select>
+        </div>
+      </div>
+      <button class="secondary" id="man-add">Add manually</button>
+    </details>
+    <p class="note">Close the Velit mobile app before scanning — it holds the single BLE connection.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="warn-box">
+    Safety: this service controls a combustion heater. Keep a working CO detector in any
+    enclosed space, retain independent power cut-off, and never rely on software alone.
+  </div>
+</footer>
+
+<script>
+const token = new URLSearchParams(location.search).get('token');
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  if (token) opts.headers['X-Auth-Token'] = token;
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+function flash(text, kind) {
+  const el = document.getElementById('message');
+  el.textContent = text;
+  el.className = 'msg show ' + kind;
+  if (kind === 'success') setTimeout(() => el.className = 'msg', 4000);
+}
+
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function stateSummary(d) {
+  const s = d.state || {};
+  if (!d.connected) return 'not connected';
+  if (s.mode === undefined) return 'connecting…';
+  const bits = [];
+  bits.push('mode ' + (s.mode ?? '?'));
+  if (s.target_temperature != null) bits.push('set ' + s.target_temperature + '°C');
+  if (s.current_temperature != null) bits.push('cur ' + s.current_temperature + '°C');
+  if (s.fault_active) bits.push('FAULT: ' + (s.fault || ''));
+  return bits.join(' · ');
+}
+
+function renderDevices(devices) {
+  const root = document.getElementById('devices');
+  if (!devices.length) { root.innerHTML = '<div class="empty">No devices yet — scan and add one below.</div>'; return; }
+  root.innerHTML = devices.map(d => `
+    <div class="device">
+      <div class="info">
+        <div class="name">${esc(d.name)} <span class="badge ${d.available ? 'ok' : 'muted'}">${d.available ? 'online' : (d.connected ? 'connected' : 'offline')}</span></div>
+        <div class="meta">${esc(d.type)} · ${esc(d.address)} · ${esc(stateSummary(d))}</div>
+      </div>
+      <button class="danger" data-node="${esc(d.node_id)}">Remove</button>
+    </div>`).join('');
+  root.querySelectorAll('button.danger').forEach(b =>
+    b.onclick = () => removeDevice(b.dataset.node, b));
+}
+
+function renderMqtt(m) {
+  document.getElementById('m-host').value = m.host || '';
+  document.getElementById('m-port').value = m.port || 1883;
+  document.getElementById('m-username').value = m.username || '';
+  document.getElementById('m-base').value = m.base_topic || 'velit';
+  document.getElementById('m-prefix').value = m.discovery_prefix || 'homeassistant';
+  document.getElementById('m-discovery').checked = !!m.discovery;
+  document.getElementById('pw-note').textContent =
+    m.password_env ? ('Password is read from $' + m.password_env + '. Type a value to override.')
+    : (m.has_password ? 'A password is set. Leave blank to keep it.' : 'No password set.');
+  const b = document.getElementById('broker-badge');
+  b.textContent = 'broker: ' + (m.connected ? 'connected' : 'disconnected');
+  b.className = 'badge ' + (m.connected ? 'ok' : 'bad');
+}
+
+async function refresh() {
+  try {
+    const cfg = await api('/api/config');
+    renderMqtt(cfg.mqtt);
+    renderDevices(cfg.devices);
+  } catch (e) { flash(e.message, 'error'); }
+}
+
+document.getElementById('save-mqtt').onclick = async (ev) => {
+  const body = {
+    host: document.getElementById('m-host').value.trim(),
+    port: parseInt(document.getElementById('m-port').value, 10) || 1883,
+    username: document.getElementById('m-username').value.trim() || null,
+    base_topic: document.getElementById('m-base').value.trim() || 'velit',
+    discovery_prefix: document.getElementById('m-prefix').value.trim() || 'homeassistant',
+    discovery: document.getElementById('m-discovery').checked,
+  };
+  const pw = document.getElementById('m-password').value;
+  if (pw) body.password = pw;
+  ev.target.disabled = true;
+  try {
+    await api('/api/mqtt', { method: 'PUT', body: JSON.stringify(body) });
+    document.getElementById('m-password').value = '';
+    flash('MQTT settings saved; reconnecting…', 'success');
+    setTimeout(refresh, 1500);
+  } catch (e) { flash(e.message, 'error'); }
+  finally { ev.target.disabled = false; }
+};
+
+document.getElementById('scan-btn').onclick = async (ev) => {
+  ev.target.disabled = true;
+  document.getElementById('scan-status').textContent = 'scanning…';
+  document.getElementById('found').innerHTML = '';
+  try {
+    const { devices } = await api('/api/scan?timeout=8');
+    renderFound(devices);
+    document.getElementById('scan-status').textContent = devices.length + ' found';
+  } catch (e) { flash(e.message, 'error'); document.getElementById('scan-status').textContent = ''; }
+  finally { ev.target.disabled = false; }
+};
+
+function renderFound(devices) {
+  const root = document.getElementById('found');
+  if (!devices.length) { root.innerHTML = '<div class="empty">No devices found. Make sure the device is on and the mobile app is closed.</div>'; return; }
+  root.innerHTML = devices.map((d, i) => `
+    <div class="found">
+      <div class="info">
+        <div class="name">${esc(d.name || 'Velit device')} ${d.configured ? '<span class="badge muted">added</span>' : ''}</div>
+        <div class="meta">${esc(d.address)} · ${d.rssi != null ? d.rssi + ' dBm' : ''}</div>
+      </div>
+      <input style="width:140px" id="fn-${i}" value="${esc(d.name || d.address)}" ${d.configured ? 'disabled' : ''}>
+      <select style="width:130px" id="ft-${i}" ${d.configured ? 'disabled' : ''}>
+        <option value="heater">Heater</option><option value="ac">Air Conditioner</option>
+      </select>
+      <button data-i="${i}" data-addr="${esc(d.address)}" ${d.configured ? 'disabled' : ''}>Add</button>
+    </div>`).join('');
+  root.querySelectorAll('button[data-addr]').forEach(b => b.onclick = () => {
+    const i = b.dataset.i;
+    addDevice({
+      name: document.getElementById('fn-' + i).value.trim(),
+      address: b.dataset.addr,
+      type: document.getElementById('ft-' + i).value,
+    }, b);
+  });
+}
+
+async function addDevice(entry, btn) {
+  if (!entry.name || !entry.address) { flash('Name and address are required', 'error'); return; }
+  if (btn) btn.disabled = true;
+  try {
+    await api('/api/devices', { method: 'POST', body: JSON.stringify(entry) });
+    flash('Added ' + entry.name, 'success');
+    await refresh();
+    document.getElementById('scan-btn').click();
+  } catch (e) { flash(e.message, 'error'); if (btn) btn.disabled = false; }
+}
+
+document.getElementById('man-add').onclick = (ev) => addDevice({
+  name: document.getElementById('man-name').value.trim(),
+  address: document.getElementById('man-address').value.trim(),
+  type: document.getElementById('man-type').value,
+}, ev.target);
+
+async function removeDevice(nodeId, btn) {
+  if (!confirm('Remove this device?')) return;
+  btn.disabled = true;
+  try { await api('/api/devices/' + encodeURIComponent(nodeId), { method: 'DELETE' });
+    flash('Device removed', 'success'); await refresh();
+  } catch (e) { flash(e.message, 'error'); btn.disabled = false; }
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
