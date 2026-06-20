@@ -8,9 +8,12 @@ while accepting commands back on MQTT. It works with any MQTT consumer, and can
 optionally publish Home Assistant discovery messages so the device appears in HA
 automatically (no custom component required).
 
-> This project began as a Home Assistant custom integration. It has been
-> re-architected as a broker-agnostic MQTT service; the BLE protocol layer is
-> carried over and hardware-validated, the Home Assistant runtime is gone.
+> This project is a fork of [**velit-hass**](https://github.com/JohnFreeborg/velit-hass),
+> the Home Assistant integration created by [John Freeborg](https://github.com/JohnFreeborg)
+> and contributors. It has been re-architected as a broker-agnostic MQTT service: the
+> validated BLE protocol layer is carried over from the original, and the Home Assistant
+> runtime is replaced. Full credit for the original Velit protocol work goes to the
+> upstream authors — see [Credits](#credits).
 
 ---
 
@@ -283,4 +286,18 @@ Set `discovery: false` for a plain, broker-agnostic interface.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branching, commit, and testing guidelines.
-Issues and pull requests are welcome at https://github.com/JohnFreeborg/velit-hass.
+
+---
+
+## Credits
+
+This project is a fork of **[velit-hass](https://github.com/JohnFreeborg/velit-hass)**
+by **[John Freeborg](https://github.com/JohnFreeborg)** and contributors (including
+[Jeremy Roe](https://github.com/jeremyroe)). The original project reverse-engineered the
+Velit Bluetooth heater (V1.02) and air-conditioner (V1.01) protocols and built the Home
+Assistant integration that this service's BLE and protocol layer is derived from. Huge
+thanks for that foundational work.
+
+This fork re-architects the integration into a standalone BLE-to-MQTT service. It is an
+independent project and is not affiliated with or endorsed by the original authors, nor
+by VELIT Cooling &amp; Heating, LLC.
